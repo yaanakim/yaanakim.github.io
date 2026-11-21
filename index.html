@@ -99,8 +99,9 @@
   }
   .count { font-variant-numeric: tabular-nums; }
 
+  @media (max-height: 500px) { .bar { margin-top: 10px; } }
   @media (max-width: 600px) {
-    .nav { width: 40px; }
+    .nav { display: none; }   /* on phones, swipe or tap the page edges to turn */
     .bar { font-size: 12px; margin-top: 16px; }
   }
   @media (prefers-reduced-motion: reduce) { .nav, .bookwrap { transition: none; } }
@@ -134,7 +135,7 @@
   // ---- Settings: change PAGE_COUNT if your portfolio's page count changes ----
   var PAGE_COUNT = 56;
   var PAGE_W = 612, PAGE_H = 792;        // page proportions (US Letter)
-  var MIN_W = 250;                        // below 2× this, the book shows one page at a time
+  var MIN_W = 100;                        // smallest page width; the book always shows two-page spreads
 
   var src = function (i) { return "page-" + String(i + 1).padStart(2, "0") + ".jpg"; };
   var book = document.getElementById("book");
@@ -166,10 +167,10 @@
 
   // Size the book to fit the window
   function fit() {
-    var w = window.innerWidth - (window.innerWidth < 600 ? 72 : 160);
-    var h = window.innerHeight - (window.innerWidth < 600 ? 120 : 150);
-    var spread = Math.min(w, h * ratio * 2);
-    var width = spread >= MIN_W * 2 ? spread : Math.min(w, h * ratio);
+    var small = window.innerWidth < 600;
+    var w = window.innerWidth - (small ? 24 : 160);   // phones: no side arrows, so use nearly the full width
+    var h = window.innerHeight - (window.innerHeight < 500 ? 70 : small ? 120 : 150);  // short screens (phone sideways) get a bigger book
+    var width = Math.max(MIN_W * 2, Math.min(w, h * ratio * 2));
     wrap.style.width = Math.floor(width) + "px";
     bar.style.width = Math.floor(width) + "px";
   }
@@ -181,7 +182,7 @@
     minWidth: MIN_W, maxWidth: 2000,
     minHeight: MIN_W / ratio, maxHeight: 2000 / ratio,
     showCover: true,
-    usePortrait: true,
+    usePortrait: false,
     drawShadow: false,
     maxShadowOpacity: 0,
     flippingTime: 400,
