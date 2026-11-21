@@ -136,7 +136,7 @@
   var PAGE_W = 612, PAGE_H = 792;        // page proportions (US Letter)
   var MIN_W = 250;                        // below 2× this, the book shows one page at a time
 
-  var src = function (i) { return "pages/page-" + String(i + 1).padStart(2, "0") + ".jpg"; };
+  var src = function (i) { return "page-" + String(i + 1).padStart(2, "0") + ".jpg"; };
   var book = document.getElementById("book");
   var wrap = book.parentNode;
   var bar = document.querySelector(".bar");
