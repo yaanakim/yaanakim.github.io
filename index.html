@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yana Kim — Portfolio</title>
+<meta name="description" content="Portfolio of Yana Kim, 2026.">
+<style>
+  :root {
+    --bg: #f3f3f2;
+    --ink: #262626;
+    --muted: #9a9a98;
+    --page-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 30px rgba(0,0,0,.07);
+    --font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+             env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+
+  .stage {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .bookwrap { flex: none; transition: transform .6s cubic-bezier(.3,.7,.2,1); }
+  .bookwrap.closed-front { transform: translateX(-25%); }
+  .bookwrap.closed-back  { transform: translateX(25%); }
+
+  .page { background: #fff; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .page img {
+    display: block; width: 100%; height: 100%;
+    object-fit: cover;
+    user-select: none; -webkit-user-drag: none; pointer-events: none;
+  }
+  /* thin light-grey line where the two pages meet */
+  .page::after {
+    content: ""; position: absolute; top: 0; bottom: 0; width: 1px;
+    pointer-events: none;
+  }
+  .page.is-left::after { right: 0; background: rgba(0,0,0,.15); }  /* translucent, so it reads as grey over images too */
+  .page.is-right::after { display: none; }
+  .page.is-cover::after, .portrait .page::after { display: none; }
+  /* one soft shadow under the whole book that follows the turning page, instead of per-page shadows */
+  .stf__block { filter: drop-shadow(0 6px 18px rgba(0,0,0,.07)); }
+
+  .nav {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 56px; height: 96px;
+    border: 0; background: none; color: var(--ink);
+    cursor: pointer; opacity: .35;
+    transition: opacity .2s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .nav:hover { opacity: .9; }
+  .nav:focus-visible { outline: 1px solid var(--ink); outline-offset: -8px; opacity: .9; }
+  .nav[disabled] { opacity: 0; pointer-events: none; }
+  .nav.prev { left: max(8px, env(safe-area-inset-left, 0px)); }
+  .nav.next { right: max(8px, env(safe-area-inset-right, 0px)); }
+  .nav svg { width: 18px; height: 34px; }
+
+  .bar {
+    flex: none;
+    margin-top: 22px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 300;
+    font-size: 13px; letter-spacing: .01em;
+    color: var(--ink);
+  }
+  .track {
+    position: relative; height: 18px; cursor: pointer;
+    touch-action: none;
+  }
+  .track::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 50%;
+    height: 1px; background: #cfcfcd;
+  }
+  .track .fill {
+    position: absolute; left: 0; top: 50%; height: 1px;
+    background: var(--ink); width: 0;
+  }
+  .track .dot {
+    position: absolute; top: 50%; left: 0;
+    width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+    border-radius: 50%; background: var(--ink);
+    transition: transform .15s;
+  }
+  .track:hover .dot, .track.dragging .dot { transform: scale(1.35); }
+  .track:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 4px;
+  }
+  .count { font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 600px) {
+    .nav { width: 40px; }
+    .bar { font-size: 12px; margin-top: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .nav, .bookwrap { transition: none; } }
+</style>
+</head>
+<body>
+  <main class="stage" aria-label="Yana Kim portfolio">
+    <div class="bookwrap"><div id="book"></div></div>
+    <div class="bar">
+      <div class="track" role="slider" tabindex="0" aria-label="Page" aria-valuemin="1">
+        <div class="fill"></div><div class="dot"></div>
+      </div>
+      <div class="meta">
+        <span class="count" aria-live="polite"></span>
+        <span class="sig">Yana Kim. 2026</span>
+      </div>
+    </div>
+  </main>
+
+  <button class="nav prev" aria-label="Previous page" disabled>
+    <svg viewBox="0 0 18 34" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M16 1 2 17l14 16"/></svg>
+  </button>
+  <button class="nav next" aria-label="Next page">
+    <svg viewBox="0 0 18 34" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M2 1l14 16L2 33"/></svg>
+  </button>
+
+
+<script src="page-flip.browser.js"></script>
+<script>
+(function () {
+  // ---- Settings: change PAGE_COUNT if your portfolio's page count changes ----
+  var PAGE_COUNT = 56;
+  var PAGE_W = 612, PAGE_H = 792;        // page proportions (US Letter)
+  var MIN_W = 250;                        // below 2× this, the book shows one page at a time
+
+  var src = function (i) { return "pages/page-" + String(i + 1).padStart(2, "0") + ".jpg"; };
+  var book = document.getElementById("book");
+  var wrap = book.parentNode;
+  var bar = document.querySelector(".bar");
+  var ratio = PAGE_W / PAGE_H;
+
+  // Build pages
+  for (var i = 0; i < PAGE_COUNT; i++) {
+    var p = document.createElement("div");
+    var side = i === 0 || i === PAGE_COUNT - 1 ? "is-cover" : (i % 2 ? "is-left" : "is-right");
+    p.className = "page " + side;
+    p.dataset.density = "hard";   // rigid sheet that rotates over the spine
+    var img = document.createElement("img");
+    img.alt = "Page " + (i + 1);
+    img.dataset.src = src(i);
+    img.decoding = "async";
+    p.appendChild(img);
+    book.appendChild(p);
+  }
+  var imgs = book.querySelectorAll("img");
+
+  // Load only the pages near where the reader is
+  function loadAround(idx) {
+    for (var j = Math.max(0, idx - 4); j <= Math.min(PAGE_COUNT - 1, idx + 8); j++) {
+      if (!imgs[j].src) imgs[j].src = imgs[j].dataset.src;
+    }
+  }
+
+  // Size the book to fit the window
+  function fit() {
+    var w = window.innerWidth - (window.innerWidth < 600 ? 72 : 160);
+    var h = window.innerHeight - (window.innerWidth < 600 ? 120 : 150);
+    var spread = Math.min(w, h * ratio * 2);
+    var width = spread >= MIN_W * 2 ? spread : Math.min(w, h * ratio);
+    wrap.style.width = Math.floor(width) + "px";
+    bar.style.width = Math.floor(width) + "px";
+  }
+  fit();
+
+  var flip = new St.PageFlip(book, {
+    width: PAGE_W, height: PAGE_H,
+    size: "stretch",
+    minWidth: MIN_W, maxWidth: 2000,
+    minHeight: MIN_W / ratio, maxHeight: 2000 / ratio,
+    showCover: true,
+    usePortrait: true,
+    drawShadow: false,
+    maxShadowOpacity: 0,
+    flippingTime: 400,
+    mobileScrollSupport: false,
+    autoSize: true
+  });
+  flip.loadFromHTML(book.querySelectorAll(".page"));
+
+  var prev = document.querySelector(".nav.prev");
+  var next = document.querySelector(".nav.next");
+  var count = document.querySelector(".count");
+
+  // ---- page number + scrubber ----
+  var track = document.querySelector(".track");
+  var dot = track.querySelector(".dot");
+  var fill = track.querySelector(".fill");
+  track.setAttribute("aria-valuemax", PAGE_COUNT);
+
+  function label(idx, portrait) {
+    if (portrait || idx === 0 || idx >= PAGE_COUNT - 1) return String(idx + 1);
+    var l = idx % 2 ? idx : idx - 1;                // left page of the spread
+    return (l + 1) + "-" + Math.min(l + 2, PAGE_COUNT);
+  }
+  function showPosition(idx, portrait) {
+    var t = label(idx, portrait);
+    count.textContent = t + " / " + PAGE_COUNT;
+    track.setAttribute("aria-valuenow", idx + 1);
+    track.setAttribute("aria-valuetext", "Page " + t + " of " + PAGE_COUNT);
+    var pct = (idx / (PAGE_COUNT - 1)) * 100;
+    dot.style.left = pct + "%";
+    fill.style.width = pct + "%";
+  }
+  function indexAt(clientX) {
+    var r = track.getBoundingClientRect();
+    var f = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+    return Math.round(f * (PAGE_COUNT - 1));
+  }
+  function goTo(idx) {
+    var cur = flip.getCurrentPageIndex();
+    if (idx === cur) return;
+    loadAround(idx);
+    if (Math.abs(idx - cur) <= 2) flip.flip(idx);
+    else { flip.turnToPage(idx); update(idx); }
+  }
+  var dragging = false;
+  track.addEventListener("pointerdown", function (e) {
+    dragging = true; track.classList.add("dragging");
+    track.setPointerCapture(e.pointerId);
+    showPosition(indexAt(e.clientX), flip.getOrientation() === "portrait");
+  });
+  track.addEventListener("pointermove", function (e) {
+    if (dragging) showPosition(indexAt(e.clientX), flip.getOrientation() === "portrait");
+  });
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false; track.classList.remove("dragging");
+    goTo(indexAt(e.clientX));
+  }
+  track.addEventListener("pointerup", endDrag);
+  track.addEventListener("pointercancel", function () {
+    dragging = false; track.classList.remove("dragging");
+    update(flip.getCurrentPageIndex());
+  });
+  track.addEventListener("keydown", function (e) {
+    if (e.key === "Home") { e.preventDefault(); goTo(0); }
+    if (e.key === "End")  { e.preventDefault(); goTo(PAGE_COUNT - 1); }
+  });
+
+  function update(idx) {
+    loadAround(idx);
+    var portrait = flip.getOrientation() === "portrait";
+    document.body.classList.toggle("portrait", portrait);
+    showPosition(idx, portrait);
+    prev.disabled = idx === 0;
+    // keep a closed book centred, like a real one on a table
+    wrap.classList.toggle("closed-front", !portrait && idx === 0);
+    wrap.classList.toggle("closed-back", !portrait && idx >= PAGE_COUNT - 1);
+    next.disabled = idx >= PAGE_COUNT - 1;
+  }
+
+  flip.on("flip", function (e) { update(e.data); });
+  flip.on("changeState", function (e) {
+    if (e.data === "flipping" || e.data === "user_fold") wrap.classList.remove("closed-front", "closed-back");
+  });
+  flip.on("changeOrientation", function () { update(flip.getCurrentPageIndex()); });
+  update(0);
+
+  prev.addEventListener("click", function () { flip.flipPrev(); });
+  next.addEventListener("click", function () { flip.flipNext(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); flip.flipNext(); }
+    if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); flip.flipPrev(); }
+  });
+
+  var t;
+  window.addEventListener("resize", function () {
+    clearTimeout(t);
+    t = setTimeout(function () { fit(); flip.update(); update(flip.getCurrentPageIndex()); }, 120);
+  });
+})();
+</script>
+</body>
+</html>
