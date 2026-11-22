@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- lets "Add to Home Screen" open the site without browser bars -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Yana Kim">
 <title>Yana Kim — Portfolio</title>
 <meta name="description" content="Portfolio of Yana Kim, 2026.">
 <style>
@@ -108,6 +112,11 @@
   .fs svg { width: 15px; height: 15px; }
   .fs .exit, .is-fullscreen .fs .enter { display: none; }
   .is-fullscreen .fs .exit { display: block; }
+  /* phones without real full screen (iPhone): hide everything but the book */
+  .immersive .nav, .immersive .track, .immersive .count,
+  .immersive .zoom, .immersive .sig { visibility: hidden; }
+  .immersive .bar { margin-top: 6px; }
+  .immersive .meta { margin-top: 0; }
 
   /* ---- zoom ---- */
   .viewport { position: relative; flex: none; }
@@ -244,8 +253,9 @@
   // Size the book to fit the window
   function fit() {
     var small = window.innerWidth < 600;
-    var w = window.innerWidth - (small ? 24 : 160);   // phones: no side arrows, so use nearly the full width
-    var h = window.innerHeight - (window.innerHeight < 500 ? 70 : small ? 120 : 150);  // short screens (phone sideways) get a bigger book
+    var immersive = document.body.classList.contains("immersive");
+    var w = window.innerWidth - (immersive ? 8 : small ? 24 : 160);   // phones: no side arrows, so use nearly the full width
+    var h = window.innerHeight - (immersive ? 56 : window.innerHeight < 500 ? 70 : small ? 120 : 150);  // short screens (phone sideways) get a bigger book
     var width = Math.max(MIN_W * 2, Math.min(w, h * ratio * 2));
     wrap.style.width = Math.floor(width) + "px";
     bar.style.width = Math.floor(width) + "px";
@@ -432,27 +442,41 @@
     if (e.key === "Escape" || e.key === "0") { setZoom(1, true); }
   });
 
-  // ---- full screen (hidden where the browser doesn't support it, e.g. iPhone Safari) ----
+  // ---- full screen ----
+  // Real full screen where the browser allows it (computers, Android, iPad).
+  // iPhone Safari doesn't allow it for web pages, so there the button switches to an
+  // "immersive" view instead: the bar and margins disappear and the book fills the screen.
   var fsBtn = document.querySelector(".fs");
   var root = document.documentElement;
-  var canFs = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+  var canFs = !!((root.requestFullscreen || root.webkitRequestFullscreen) &&
+                 (document.fullscreenEnabled || document.webkitFullscreenEnabled));
   function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement; }
-  if (canFs) {
-    fsBtn.hidden = false;
-    fsBtn.addEventListener("click", function () {
+  function setFsLook(on) {
+    document.body.classList.toggle("is-fullscreen", on);
+    fsBtn.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+  }
+  function relayout() { fit(); flip.update(); update(flip.getCurrentPageIndex()); applyZoom(); }
+  function toggleImmersive(on) {
+    document.body.classList.toggle("immersive", on);
+    setFsLook(on);
+    window.scrollTo(0, 0);
+    relayout();
+  }
+  fsBtn.hidden = false;
+  fsBtn.addEventListener("click", function () {
+    if (canFs) {
       if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
       else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
-    });
-    function onFs() {
-      var on = !!fsEl();
-      document.body.classList.toggle("is-fullscreen", on);
-      fsBtn.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+    } else {
+      toggleImmersive(!document.body.classList.contains("immersive"));
     }
-    document.addEventListener("fullscreenchange", onFs);
-    document.addEventListener("webkitfullscreenchange", onFs);
-  }
+  });
+  function onFs() { setFsLook(!!fsEl()); }
+  document.addEventListener("fullscreenchange", onFs);
+  document.addEventListener("webkitfullscreenchange", onFs);
   document.addEventListener("keydown", function (e) {
-    if ((e.key === "f" || e.key === "F") && canFs && !e.metaKey && !e.ctrlKey) fsBtn.click();
+    if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey) fsBtn.click();
+    if (e.key === "Escape" && document.body.classList.contains("immersive")) toggleImmersive(false);
   });
 
   var t;
