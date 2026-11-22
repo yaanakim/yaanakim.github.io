@@ -94,29 +94,105 @@
   .track:hover .dot, .track.dragging .dot { transform: scale(1.35); }
   .track:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
   .meta {
-    display: flex; justify-content: space-between; align-items: baseline;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
     margin-top: 4px;
   }
+  .right { justify-self: end; display: flex; align-items: center; gap: 12px; }
+  .fs {
+    width: 24px; height: 24px; padding: 0; margin-right: -4px;
+    border: 0; background: none; color: #000; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fs:hover { opacity: .6; }
+  .fs:focus-visible { outline: 1px solid #000; }
+  .fs svg { width: 15px; height: 15px; }
+  .fs .exit, .is-fullscreen .fs .enter { display: none; }
+  .is-fullscreen .fs .exit { display: block; }
+
+  /* ---- zoom ---- */
+  .viewport { position: relative; flex: none; }
+  .zoomlayer {
+    transform-origin: 50% 50%;
+    transition: transform .5s cubic-bezier(.45, 0, .25, 1);   /* slow, smooth glide */
+  }
+  .zoomlayer.instant { transition: none; }   /* dragging, pinching, sliding follow the hand directly */
+  .viewport.zoomed { overflow: hidden; }
+  .panlayer {
+    position: absolute; inset: 0; z-index: 20;
+    display: none; cursor: grab; touch-action: none;
+  }
+  .viewport.zoomed .panlayer { display: block; }
+  .panlayer.panning { cursor: grabbing; }
+  .zoom { display: flex; align-items: center; gap: 6px; }
+  .zoom button {
+    width: 24px; height: 24px; padding: 0; border: 0; background: none;
+    color: var(--ink); cursor: pointer; opacity: .55;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .zoom button:hover { opacity: 1; }
+  .zoom button[disabled] { opacity: .2; cursor: default; }
+  .zoom button:focus-visible { outline: 1px solid var(--ink); }
+  .zoom svg { width: 11px; height: 11px; }
+  .zoom input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 96px; height: 18px; margin: 0; background: none; cursor: pointer;
+  }
+  .zoom input[type=range]::-webkit-slider-runnable-track { height: 1px; background: #cfcfcd; }
+  .zoom input[type=range]::-moz-range-track { height: 1px; background: #cfcfcd; }
+  .zoom input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 9px; height: 9px; margin-top: -4px;
+    border: 0; border-radius: 50%; background: var(--ink);
+  }
+  .zoom input[type=range]::-moz-range-thumb {
+    width: 9px; height: 9px; border: 0; border-radius: 50%; background: var(--ink);
+  }
+  .zoom input[type=range]:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
   .count { font-variant-numeric: tabular-nums; }
 
   @media (max-height: 500px) { .bar { margin-top: 10px; } }
   @media (max-width: 600px) {
     .nav { display: none; }   /* on phones, swipe or tap the page edges to turn */
     .bar { font-size: 12px; margin-top: 16px; }
+    .zoom input[type=range] { width: 56px; }
+    .zoom { gap: 2px; }
   }
-  @media (prefers-reduced-motion: reduce) { .nav, .bookwrap { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .nav, .bookwrap, .zoomlayer { transition: none; } }
 </style>
 </head>
 <body>
   <main class="stage" aria-label="Yana Kim portfolio">
-    <div class="bookwrap"><div id="book"></div></div>
+    <div class="viewport">
+      <div class="zoomlayer">
+        <div class="bookwrap"><div id="book"></div></div>
+      </div>
+      <div class="panlayer" aria-hidden="true"></div>
+    </div>
     <div class="bar">
       <div class="track" role="slider" tabindex="0" aria-label="Page" aria-valuemin="1">
         <div class="fill"></div><div class="dot"></div>
       </div>
       <div class="meta">
         <span class="count" aria-live="polite"></span>
-        <span class="sig">Yana Kim. 2026</span>
+        <div class="zoom">
+          <button class="zoom-out" aria-label="Zoom out" disabled>
+            <svg viewBox="0 0 11 11" stroke="currentColor" stroke-width="1.1"><path d="M0 5.5h11"/></svg>
+          </button>
+          <input class="zoom-range" type="range" min="1" max="3" step="0.01" value="1" aria-label="Zoom">
+          <button class="zoom-in" aria-label="Zoom in">
+            <svg viewBox="0 0 11 11" stroke="currentColor" stroke-width="1.1"><path d="M0 5.5h11M5.5 0v11"/></svg>
+          </button>
+        </div>
+        <div class="right">
+          <span class="sig">Yana Kim. 2026</span>
+          <button class="fs" aria-label="Full screen" hidden>
+            <svg class="enter" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 1.5h4.5V6M14.5 1.5 9.5 6.5M6 14.5H1.5V10M1.5 14.5l5-5M1.5 6V1.5H6M1.5 1.5l5 5M14.5 10v4.5H10M14.5 14.5l-5-5"/>
+            </svg>
+            <svg class="exit" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.5 2.5v4h4M9.5 6.5l5-5M6.5 13.5v-4h-4M6.5 9.5l-5 5M2.5 6.5h4v-4M6.5 6.5l-5-5M13.5 9.5h-4v4M9.5 9.5l5 5"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </main>
@@ -273,16 +349,119 @@
   prev.addEventListener("click", function () { flip.flipPrev(); });
   next.addEventListener("click", function () { flip.flipNext(); });
   document.addEventListener("keydown", function (e) {
+    if (e.target.classList && e.target.classList.contains("zoom-range")) return;
     if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); flip.flipNext(); }
     if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); flip.flipPrev(); }
+  });
+
+  // ---- zoom + pan ----
+  var viewport = document.querySelector(".viewport");
+  var layer = document.querySelector(".zoomlayer");
+  var pan = document.querySelector(".panlayer");
+  var range = document.querySelector(".zoom-range");
+  var zIn = document.querySelector(".zoom-in");
+  var zOut = document.querySelector(".zoom-out");
+  var Z_MIN = 1, Z_MAX = 3, Z_STEP = 0.5;
+  var z = 1, tx = 0, ty = 0;
+
+  function clampPan() {
+    var mx = (z - 1) * viewport.offsetWidth / 2;
+    var my = (z - 1) * viewport.offsetHeight / 2;
+    tx = Math.max(-mx, Math.min(mx, tx));
+    ty = Math.max(-my, Math.min(my, ty));
+  }
+  var unclip;
+  function applyZoom(animate) {
+    clampPan();
+    layer.classList.toggle("instant", !animate);
+    layer.style.transform = z === 1 ? "" : "translate(" + tx + "px," + ty + "px) scale(" + z + ")";
+    clearTimeout(unclip);
+    if (z > 1) viewport.classList.add("zoomed");
+    // when zooming back out, keep the frame clipped until the glide finishes
+    else if (animate) unclip = setTimeout(function () { viewport.classList.remove("zoomed"); }, 520);
+    else viewport.classList.remove("zoomed");
+    range.value = z;
+    zOut.disabled = z <= Z_MIN;
+    zIn.disabled = z >= Z_MAX;
+  }
+  function setZoom(nz, animate) {
+    nz = Math.round(Math.max(Z_MIN, Math.min(Z_MAX, nz)) * 100) / 100;
+    if (nz === 1) { tx = 0; ty = 0; }
+    else { tx *= nz / z; ty *= nz / z; }   // keep the same spot centred
+    z = nz;
+    applyZoom(animate);
+  }
+  zIn.addEventListener("click", function () { setZoom(z + Z_STEP, true); });
+  zOut.addEventListener("click", function () { setZoom(z - Z_STEP, true); });
+  range.addEventListener("input", function () { setZoom(parseFloat(range.value)); });
+
+  // drag to pan while zoomed (this layer also stops drags from turning pages)
+  var panStart = null;
+  pan.addEventListener("pointerdown", function (e) {
+    panStart = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+    pan.setPointerCapture(e.pointerId);
+    pan.classList.add("panning");
+  });
+  pan.addEventListener("pointermove", function (e) {
+    if (!panStart) return;
+    tx = panStart.tx + (e.clientX - panStart.x);
+    ty = panStart.ty + (e.clientY - panStart.y);
+    applyZoom();
+  });
+  function endPan() { panStart = null; pan.classList.remove("panning"); }
+  pan.addEventListener("pointerup", endPan);
+  pan.addEventListener("pointercancel", endPan);
+
+  // trackpad pinch (and ctrl + scroll) zooms the book instead of the whole page;
+  // plain scrolling pans when zoomed in
+  viewport.addEventListener("wheel", function (e) {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      setZoom(z * Math.exp(-e.deltaY * 0.01));
+    } else if (z > 1) {
+      e.preventDefault();
+      tx -= e.deltaX; ty -= e.deltaY;
+      applyZoom();
+    }
+  }, { passive: false });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target === range) return;
+    if (e.key === "+" || e.key === "=") { e.preventDefault(); setZoom(z + Z_STEP, true); }
+    if (e.key === "-" || e.key === "_") { e.preventDefault(); setZoom(z - Z_STEP, true); }
+    if (e.key === "Escape" || e.key === "0") { setZoom(1, true); }
+  });
+
+  // ---- full screen (hidden where the browser doesn't support it, e.g. iPhone Safari) ----
+  var fsBtn = document.querySelector(".fs");
+  var root = document.documentElement;
+  var canFs = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+  function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement; }
+  if (canFs) {
+    fsBtn.hidden = false;
+    fsBtn.addEventListener("click", function () {
+      if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+    });
+    function onFs() {
+      var on = !!fsEl();
+      document.body.classList.toggle("is-fullscreen", on);
+      fsBtn.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+    }
+    document.addEventListener("fullscreenchange", onFs);
+    document.addEventListener("webkitfullscreenchange", onFs);
+  }
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "f" || e.key === "F") && canFs && !e.metaKey && !e.ctrlKey) fsBtn.click();
   });
 
   var t;
   window.addEventListener("resize", function () {
     clearTimeout(t);
-    t = setTimeout(function () { fit(); flip.update(); update(flip.getCurrentPageIndex()); }, 120);
+    t = setTimeout(function () { fit(); flip.update(); update(flip.getCurrentPageIndex()); applyZoom(); }, 120);
   });
 })();
 </script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "dd95aa1742914f4ab448533f38740f29"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
